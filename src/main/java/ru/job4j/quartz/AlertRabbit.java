@@ -4,10 +4,9 @@ import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Properties;
 
 import static org.quartz.JobBuilder.*;
@@ -36,24 +35,38 @@ import static org.quartz.SimpleScheduleBuilder.*;
  * Задание.
  * 1. Доработайте программу AlertRabbit. Нужно создать файл rabbit.properties.
  * 2. При запуске программы нужно читать файл rabbit.properties.
+ * <p>
+ * 1.1. Job c параметрами
+ * В проекте агрегатор будет использоваться база данных. Открыть и закрывать соединение с базой накладно.
+ * Чтобы этого избежать коннект к базе будет создаваться при старте. Объект коннект будет передаваться в Job.
+ * Quartz создает объект Job, каждый раз при выполнении работы.
+ * Каждый запуск работы вызывает конструктор. Чтобы в объект Job иметь общий ресурс нужно использовать JobExecutionContext.
+ * При создании Job мы указываем параметры data. В них мы передаем ссылку на store (connection)
+ * Чтобы получить объекты из context используется  context.getJobDetail().getJobDataMap().get("store");
+ * Объект store является общим для каждой работы.
+ * <p>
+ * Задача:
+ * Добавить в файл rabbit.properties настройки для базы данных. Создать sql schema с таблицей rabbit и полем created_date.
+ * При старте приложения создать connect к базе и передать его в Job. В Job сделать запись в таблицу, когда выполнена Job.
+ * Весь main должен работать 10 секунд. Закрыть коннект нужно в блоке try-with-resources.
  */
 
 public class AlertRabbit {
 
-    private Connection cn;
-
     public static void main(String[] args) {
         try {
-            List<Long> store = new ArrayList<>();
+            Properties properties = config();
+            int interval = Integer.parseInt(properties.getProperty("rabbit.interval"));
+            Connection connection = init(properties);
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap data = new JobDataMap();
-            data.put("store", store);
+            data.put("connection", connection);
             JobDetail job = newJob(Rabbit.class)
                     .usingJobData(data)
                     .build();
             SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(param())
+                    .withIntervalInSeconds(interval)
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
@@ -62,32 +75,29 @@ public class AlertRabbit {
             scheduler.scheduleJob(job, trigger);
             Thread.sleep(10000);
             scheduler.shutdown();
-            System.out.println(store);
         } catch (Exception se) {
             se.printStackTrace();
         }
     }
 
-    public static int param() {
+    public static Properties config() {
         try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
             Properties config = new Properties();
             config.load(in);
-            return Integer.parseInt(config.getProperty("rabbit.interval"));
+            return config;
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public void init() {
-        try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
-            Properties config = new Properties();
-            config.load(in);
-            Class.forName(config.getProperty("rabbit.driver-class-name"));
-            cn = DriverManager.getConnection(
-                    config.getProperty("rabbit.url"),
-                    config.getProperty("rabbit.username"),
-                    config.getProperty("rabbit.password")
-            );
+    public static Connection init(Properties properties) throws ClassNotFoundException {
+        Class.forName(properties.getProperty("rabbit.driver-class-name"));
+        try (Connection connection = DriverManager.getConnection(
+                properties.getProperty("rabbit.url"),
+                properties.getProperty("rabbit.username"),
+                properties.getProperty("rabbit.password"))
+        ) {
+            return connection;
 
         } catch (Exception e) {
             throw new IllegalStateException(e);
@@ -103,8 +113,14 @@ public class AlertRabbit {
         @Override
         public void execute(JobExecutionContext context) throws JobExecutionException {
             System.out.println("Rabbit runs here ...");
-            List<Long> store = (List<Long>) context.getJobDetail().getJobDataMap().get("store");
-            store.add(System.currentTimeMillis());
+            Connection connection = (Connection) context.getJobDetail().getJobDataMap().get("connection");
+            try (PreparedStatement statement =
+                         connection.prepareStatement("insert into rabbit(created_date) values (?)")) {
+                statement.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS)));
+                statement.execute();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
     }
 }
