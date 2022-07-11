@@ -54,10 +54,9 @@ import static org.quartz.SimpleScheduleBuilder.*;
 public class AlertRabbit {
 
     public static void main(String[] args) {
-        try {
-            Properties properties = config();
-            int interval = Integer.parseInt(properties.getProperty("rabbit.interval"));
-            Connection connection = init(properties);
+        Properties properties = config();
+        int interval = Integer.parseInt(properties.getProperty("rabbit.interval"));
+        try (Connection connection = init(properties)) {
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap data = new JobDataMap();
@@ -90,18 +89,13 @@ public class AlertRabbit {
         }
     }
 
-    public static Connection init(Properties properties) throws ClassNotFoundException {
+    public static Connection init(Properties properties) throws ClassNotFoundException, SQLException {
         Class.forName(properties.getProperty("rabbit.driver-class-name"));
-        try (Connection connection = DriverManager.getConnection(
+        Connection connection = DriverManager.getConnection(
                 properties.getProperty("rabbit.url"),
                 properties.getProperty("rabbit.username"),
-                properties.getProperty("rabbit.password"))
-        ) {
-            return connection;
-
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+                properties.getProperty("rabbit.password"));
+        return connection;
     }
 
     public static class Rabbit implements Job {
