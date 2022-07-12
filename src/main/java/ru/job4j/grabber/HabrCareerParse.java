@@ -1,10 +1,11 @@
-package ru.job4j.quartz;
+package ru.job4j.grabber;
 
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import ru.job4j.grabber.utils.HabrCareerDateTimeParser;
 
 import java.io.IOException;
 
@@ -53,13 +54,13 @@ public class HabrCareerParse {
         Document document = connection.get();
         Elements rows = document.select(".vacancy-card__inner");
         rows.forEach(row -> {
-            Element datetimeElement = row.select(".vacancy-card__date").first();
+            Element cardDateElement = row.select(".vacancy-card__date").first();
             Element titleElement = row.select(".vacancy-card__title").first();
             Element linkElement = titleElement.child(0);
-            String datetime = datetimeElement.text();
+            String dateTime = cardDateElement.text();
             String vacancyName = titleElement.text();
             String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-            System.out.printf("%s %s %s%n", vacancyName, link, datetime);
+            System.out.printf("%s %s %s %s%n", vacancyName, link, dateTime);
         });
     }
 }
