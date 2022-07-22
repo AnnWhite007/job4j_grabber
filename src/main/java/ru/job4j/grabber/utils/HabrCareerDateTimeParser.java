@@ -1,6 +1,7 @@
 package ru.job4j.grabber.utils;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 /**
  * 2.1. Преобразование даты
@@ -12,7 +13,7 @@ public class HabrCareerDateTimeParser implements DateTimeParser {
 
     @Override
     public LocalDateTime parse(String parse) {
-        LocalDateTime localDateTime = LocalDateTime.parse(parse);
+        LocalDateTime localDateTime = LocalDateTime.from(ZonedDateTime.parse(parse));
         return localDateTime;
     }
 
