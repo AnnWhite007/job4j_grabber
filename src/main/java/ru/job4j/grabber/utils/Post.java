@@ -3,12 +3,23 @@ package ru.job4j.grabber.utils;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+/**
+ * 2.2. Модель данных - Post.
+ */
+
 public class Post {
     private int id;
     private String title;
     private String link;
     private String description;
     private LocalDateTime created;
+
+    public Post(String title, String link, String description, LocalDateTime created) {
+        this.title = title;
+        this.link = link;
+        this.description = description;
+        this.created = created;
+    }
 
     public Post(int id, String title, String link, String description, LocalDateTime created) {
         this.id = id;
@@ -60,7 +71,11 @@ public class Post {
 
     @Override
     public String toString() {
-        return String.format("id: %s, title: %s, link: %s, description: %s, created: %s", id, title, link, description, created);
+        return "id: " + id + System.lineSeparator()
+                + "title: " + title + System.lineSeparator()
+                + "link: " + link + System.lineSeparator()
+                + "description: " + description + System.lineSeparator()
+                + "created: " + created;
     }
 
     @Override
