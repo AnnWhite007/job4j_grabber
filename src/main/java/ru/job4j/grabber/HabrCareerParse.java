@@ -7,6 +7,8 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 2. Парсинг HTML страницы.
@@ -40,6 +42,9 @@ import java.io.IOException;
  * Дочерние элементы можно получать через индекс - метод child(0) или же через селектор - select(".vacancy-card__title").
  * 3) Наконец получаем данные непосредственно. text() возвращает все содержимое элемента в виде текста, т.е. весь текст что находится вне тегов HTML.
  * Ссылку находится в виде атрибута, поэтому ее значение надо получить как значение атрибута. Для этого служит метод attr()
+ *
+ * 2.1.1. Парсинг. Парсить нужно первые 5 страниц.
+ * 2.3. Загрузка деталей поста. Создайте метод для загрузки деталей объявления.
  */
 
 public class HabrCareerParse {
@@ -63,5 +68,16 @@ public class HabrCareerParse {
                 System.out.printf("%s %s %s%n", vacancyName, link, dateTime);
             });
         }
+    }
+
+    private String retrieveDescription(String link) throws IOException {
+        Connection connection = Jsoup.connect(link);
+        Document document = connection.get();
+        Elements rows = document.select(".style-ugc");
+        List<String> description = new ArrayList<>();
+        rows.forEach(row -> {
+            description.add(row.text());
+        });
+        return String.join(";", description);
     }
 }
