@@ -5,8 +5,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import ru.job4j.grabber.utils.DateTimeParser;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,16 +44,26 @@ import java.util.List;
  * Дочерние элементы можно получать через индекс - метод child(0) или же через селектор - select(".vacancy-card__title").
  * 3) Наконец получаем данные непосредственно. text() возвращает все содержимое элемента в виде текста, т.е. весь текст что находится вне тегов HTML.
  * Ссылку находится в виде атрибута, поэтому ее значение надо получить как значение атрибута. Для этого служит метод attr()
- *
+ * <p>
  * 2.1.1. Парсинг. Парсить нужно первые 5 страниц.
  * 2.3. Загрузка деталей поста. Создайте метод для загрузки деталей объявления.
+ * 2.4. HabrCareerParse
+ * В list передается  ссылка "https://career.habr.com/vacancies/java_developer?page=" и в цикле Вы прибавляете к ней номера страниц от 1 до 5.
+ * Имейте в виду, что ссылка будет поступать извне. У нас запуск программы в другом классе.
+ * Парсинг Post вынесите в отдельный метод c Element в параметрах (возврат Post), а его уже используйте в list
  */
 
-public class HabrCareerParse {
+public class HabrCareerParse implements Parse {
 
     private static final String SOURCE_LINK = "https://career.habr.com";
 
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
+
+    private final DateTimeParser dateTimeParser;
+
+    public HabrCareerParse(DateTimeParser dateTimeParser) {
+        this.dateTimeParser = dateTimeParser;
+    }
 
     public static void main(String[] args) throws IOException {
         for (int p = 1; p <= 5; p++) {
@@ -73,11 +85,42 @@ public class HabrCareerParse {
     private String retrieveDescription(String link) throws IOException {
         Connection connection = Jsoup.connect(link);
         Document document = connection.get();
-        Elements rows = document.select(".style-ugc");
-        List<String> description = new ArrayList<>();
+        Element description = document.selectFirst(".style-ugc");
+        return description.text();
+    }
+
+    public Post element(Document document) {
+        Post post = new Post();
+        Elements rows = document.select(".vacancy-card__inner");
         rows.forEach(row -> {
-            description.add(row.text());
+            Element titleElement = row.select(".vacancy-card__title").first();
+            Element linkElement = titleElement.child(0);
+            Element dateElement = row.select(".vacancy-card__date").first();
+            String dateTime = dateElement.child(0).attr("datetime");
+            LocalDateTime localDateTime = LocalDateTime.parse(dateTime);
+            post.setCreated(localDateTime);
+            post.setTitle(titleElement.text());
+            String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
+            post.setLink(link);
+            String description = null;
+            try {
+                description = retrieveDescription(link);
+                post.setDescription(description);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
-        return String.join(";", description);
+        return post;
+    }
+
+    @Override
+    public List<Post> list(String link) throws IOException {
+        List<Post> vacancyList = new ArrayList<>();
+        for (int p = 1; p <= 5; p++) {
+            Connection connection = Jsoup.connect(link + p);
+            Document document = connection.get();
+            vacancyList.add(element(document));
+        }
+        return vacancyList;
     }
 }
