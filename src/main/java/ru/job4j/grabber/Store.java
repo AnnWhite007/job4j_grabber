@@ -13,7 +13,7 @@ import java.util.List;
  */
 
 public interface Store {
-    void save(Post post);
+    void save(Post post) throws Exception;
 
     List<Post> getAll();
 
