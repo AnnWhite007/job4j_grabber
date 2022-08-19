@@ -6,7 +6,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import ru.job4j.grabber.utils.DateTimeParser;
-import ru.job4j.grabber.utils.HabrCareerDateTimeParser;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -61,13 +60,13 @@ public class HabrCareerParse implements Parse {
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
 
     private final DateTimeParser dateTimeParser;
+    static final int LIMIT = 5;
 
     public HabrCareerParse(DateTimeParser dateTimeParser) {
         this.dateTimeParser = dateTimeParser;
     }
 
     public static void main(String[] args) throws IOException {
-        final int LIMIT = 5;
         for (int p = 1; p <= LIMIT; p++) {
             Connection connection = Jsoup.connect(PAGE_LINK + p);
             Document document = connection.get();
@@ -92,25 +91,20 @@ public class HabrCareerParse implements Parse {
     }
 
     public Post getPost(Element row) {
-        Post post = new Post();
         Element titleElement = row.select(".vacancy-card__title").first();
         Element linkElement = titleElement.child(0);
         Element dateElement = row.select(".vacancy-card__date").first();
         String dateTime = dateElement.child(0).attr("datetime");
-        DateTimeParser habrCareerDateTimeParser = new HabrCareerDateTimeParser();
-        HabrCareerParse habrCareerParse = new HabrCareerParse(habrCareerDateTimeParser);
-        LocalDateTime localDateTime = habrCareerParse.dateTimeParser.parse(dateTime);
-        post.setCreated(localDateTime);
-        post.setTitle(titleElement.text());
+        LocalDateTime localDateTime = dateTimeParser.parse(dateTime);
         String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-        post.setLink(link);
+
         String description;
         try {
             description = retrieveDescription(link);
-            post.setDescription(description);
-        } catch (IllegalArgumentException | IOException i) {
-            i.printStackTrace();
+        } catch (IOException i) {
+            throw new IllegalArgumentException();
         }
+        Post post = new Post(titleElement.text(), link, description, localDateTime);
         return post;
     }
 
