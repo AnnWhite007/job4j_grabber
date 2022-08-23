@@ -21,21 +21,21 @@ public class PsqlStore implements Store, AutoCloseable {
 
     public static void main(String[] args) throws Exception {
         Properties properties = config();
-       try (PsqlStore psqlStore = new PsqlStore(properties)) {
-           Post post = new Post("test", "/1234", "qwerty", LocalDateTime.of(2017, 11, 6, 6, 30, 40, 50000));
-           Post post2 = new Post("test2", "/0000", "qwerty2", LocalDateTime.of(2022, 1, 7, 6, 40, 2, 1200));
-           Post post3 = new Post("test3", "/1111", "qwerty3", LocalDateTime.of(2000, 5, 2, 2, 20, 0, 0));
+        try (PsqlStore psqlStore = new PsqlStore(properties)) {
+            Post post = new Post("test", "/1234", "qwerty", LocalDateTime.of(2017, 11, 6, 6, 30, 40, 50000));
+            Post post2 = new Post("test2", "/0000", "qwerty2", LocalDateTime.of(2022, 1, 7, 6, 40, 2, 1200));
+            Post post3 = new Post("test3", "/1111", "qwerty3", LocalDateTime.of(2000, 5, 2, 2, 20, 0, 0));
 
-           psqlStore.save(post);
-           psqlStore.save(post2);
-           psqlStore.save(post3);
-           for (Post value : psqlStore.getAll()) {
-               System.out.println(value);
-           }
+            psqlStore.save(post);
+            psqlStore.save(post2);
+            psqlStore.save(post3);
+            for (Post value : psqlStore.getAll()) {
+                System.out.println(value);
+            }
 
-           Post post4 = psqlStore.findById(5);
-           System.out.println(post4);
-       }
+            Post post4 = psqlStore.findById(5);
+            System.out.println(post4);
+        }
     }
 
     public PsqlStore(Properties cfg) throws SQLException {
@@ -51,8 +51,8 @@ public class PsqlStore implements Store, AutoCloseable {
 
     @Override
     public void save(Post post) throws SQLException {
-        try (PreparedStatement ps = cnn.prepareStatement("insert into post(name, text, link, created) " +
-                "values (?, ?, ?, ?) on conflict (link) do nothing")) {
+        try (PreparedStatement ps = cnn.prepareStatement("insert into post(name, text, link, created) "
+                + "values (?, ?, ?, ?) on conflict (link) do nothing")) {
             ps.setString(1, post.getTitle());
             ps.setString(2, post.getDescription());
             ps.setString(3, post.getLink());
