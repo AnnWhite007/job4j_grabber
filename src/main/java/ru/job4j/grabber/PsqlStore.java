@@ -38,6 +38,16 @@ public class PsqlStore implements Store, AutoCloseable {
         }
     }
 
+    public static Properties config() {
+        try (InputStream in = PsqlStore.class.getClassLoader().getResourceAsStream("post.properties")) {
+            Properties config = new Properties();
+            config.load(in);
+            return config;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     public PsqlStore(Properties cfg) throws SQLException {
         try {
             Class.forName(cfg.getProperty("jdbc.driver"));
@@ -49,8 +59,18 @@ public class PsqlStore implements Store, AutoCloseable {
                 cfg.getProperty("jdbc.password"));
     }
 
+    public Post parseResultSet(ResultSet resultSet) throws SQLException {
+        Post post = new Post();
+        post.setId((resultSet.getInt(1)));
+        post.setTitle(resultSet.getString(2));
+        post.setDescription(resultSet.getString(3));
+        post.setLink(resultSet.getString(4));
+        post.setCreated(resultSet.getTimestamp(5).toLocalDateTime());
+        return post;
+    }
+
     @Override
-    public void save(Post post) throws SQLException {
+    public void save(Post post) {
         try (PreparedStatement ps = cnn.prepareStatement("insert into post(name, text, link, created) "
                 + "values (?, ?, ?, ?) on conflict (link) do nothing")) {
             ps.setString(1, post.getTitle());
@@ -58,11 +78,13 @@ public class PsqlStore implements Store, AutoCloseable {
             ps.setString(3, post.getLink());
             ps.setTimestamp(4, Timestamp.valueOf(post.getCreated()));
             ps.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
     @Override
-    public List<Post> getAll() throws SQLException {
+    public List<Post> getAll() {
         String query = "select * from post";
         List<Post> posts = new ArrayList<>();
         try (Statement statement = cnn.createStatement();
@@ -71,20 +93,24 @@ public class PsqlStore implements Store, AutoCloseable {
                 Post post = parseResultSet(resultSet);
                 posts.add(post);
             }
-            return posts;
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+        return posts;
     }
 
     @Override
-    public Post findById(int id) throws SQLException {
+    public Post findById(int id) {
         Post post = null;
         try (PreparedStatement ps = cnn.prepareStatement("select * from post where id = ?;")) {
             ps.setInt(1, id);
             try (ResultSet resultSet = ps.executeQuery()) {
-                while (resultSet.next()) {
+                if (resultSet.next()) {
                     post = parseResultSet(resultSet);
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return post;
     }
@@ -94,25 +120,5 @@ public class PsqlStore implements Store, AutoCloseable {
         if (cnn != null) {
             cnn.close();
         }
-    }
-
-    public static Properties config() {
-        try (InputStream in = PsqlStore.class.getClassLoader().getResourceAsStream("post.properties")) {
-            Properties config = new Properties();
-            config.load(in);
-            return config;
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    public Post parseResultSet(ResultSet resultSet) throws SQLException {
-        Post post = new Post();
-        post.setId((resultSet.getInt(1)));
-        post.setTitle(resultSet.getString(2));
-        post.setDescription(resultSet.getString(3));
-        post.setLink(resultSet.getString(4));
-        post.setCreated(resultSet.getTimestamp(5).toLocalDateTime());
-        return post;
     }
 }
