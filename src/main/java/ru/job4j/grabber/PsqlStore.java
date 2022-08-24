@@ -18,6 +18,16 @@ public class PsqlStore implements Store, AutoCloseable {
 
     private Connection cnn;
 
+    public PsqlStore(Properties cfg) throws SQLException {
+        try {
+            Class.forName(cfg.getProperty("jdbc.driver"));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        cnn = DriverManager.getConnection(cfg.getProperty("jdbc.url"),
+                cfg.getProperty("jdbc.username"),
+                cfg.getProperty("jdbc.password"));
+    }
 
     public static void main(String[] args) throws Exception {
         Properties properties = config();
@@ -46,17 +56,6 @@ public class PsqlStore implements Store, AutoCloseable {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    public PsqlStore(Properties cfg) throws SQLException {
-        try {
-            Class.forName(cfg.getProperty("jdbc.driver"));
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-        cnn = DriverManager.getConnection(cfg.getProperty("jdbc.url"),
-                cfg.getProperty("jdbc.username"),
-                cfg.getProperty("jdbc.password"));
     }
 
     public Post parseResultSet(ResultSet resultSet) throws SQLException {
