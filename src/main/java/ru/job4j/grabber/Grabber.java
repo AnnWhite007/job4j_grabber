@@ -16,6 +16,14 @@ import static org.quartz.JobBuilder.newJob;
 import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import static org.quartz.TriggerBuilder.newTrigger;
 
+/**
+ * 6. Rласс Grabber - должен выполнять все действия из технического задания.
+ * 7. Web. возможность получать данные через браузер от граббера.
+ * ответ от сервера будет в виде списка вакансий. (как в задании на IO EchoServer).
+ * "URL http://localhost:9000" -  строковое представление найденных вакансий.
+ *
+ */
+
 public class Grabber implements Grab {
     private final Properties cfg = new Properties();
 
